@@ -64,6 +64,26 @@ class RetrievalWeights:
     def as_dict(self) -> dict[str, float]:
         return {k: getattr(self, k) for k in self.__slots__}
 
+    @classmethod
+    def lexical_heavy(cls) -> "RetrievalWeights":
+        """词面级 embedder（哈希 / TF-IDF 这类）的推荐权重。
+
+        理由：这类 embedder 的相似度**区分度很差**——实测两条人眼可辨的同义表述
+        也只有 0.5~0.8 的余弦，而"完全不相关"的两条能到 0.5。
+        如果继续让 ``similarity`` 占 0.52，排序会退化成"看起来都差不多"。
+        此时应当把话语权交给 BM25 与重要性。
+
+        换成真实语义向量（bge / voyage / text-embedding-3）后请用默认权重。
+        **权重和阈值一样，是跟着 embedder 走的校准量，不是常数。**
+        """
+        return cls(
+            similarity=0.30,
+            lexical=0.40,
+            recency=0.12,
+            importance=0.12,
+            frequency=0.06,
+        )
+
     def __repr__(self) -> str:  # pragma: no cover - 调试用
         parts = ", ".join(f"{k}={v:.3f}" for k, v in self.as_dict().items())
         return f"RetrievalWeights({parts})"

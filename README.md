@@ -2,11 +2,11 @@
 
 给 AI Agent 加一层**可运维的长期记忆**：写入策略 / 事实取代 / 混合检索 / token 预算组装 / 遗忘与归并。
 
-> 3296 行实现 + 2225 行测试，**307 个测试用例全部通过**，零 API Key、离线可跑。
+> 3296 行实现 + 2225 行测试，**309 个测试用例全部通过**，零 API Key、离线可跑。
 
 ```text
 $ python -m pytest tests/
-307 passed in 0.28s
+309 passed in 0.28s
 
 $ python scripts/demo.py
 ... 六个场景的端到端演示 ...
@@ -30,7 +30,7 @@ $ python scripts/demo.py
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest tests/        # 307 passed
+python -m pytest tests/        # 309 passed
 python scripts/demo.py         # 离线端到端演示
 ```
 
@@ -115,12 +115,16 @@ SINGLE_VALUED_KINDS = frozenset({MemoryKind.SEMANTIC})
 * 每次写入/取代/过期都落 `memory_events`，能回答"它为什么记得这个"；
 * 遗忘是软删除（`status=expired`），可复盘。
 
-### 3. 阈值不是常数，是校准量
+### 3. 阈值与权重都不是常数，是校准量
 
 `HashingEmbedder` 是词面级别的，会压缩相似度分布：两条真正的同义表述只有 **0.813**，
 而真实语义向量通常在 0.95 以上。所以 `scripts/demo.py` 把离线合并阈值从默认 0.93 调到 0.80。
 
-**换了 embedder 就要重新标定阈值**，否则要么永远合并不了，要么把不同的事合并成一条。
+同理，哈希 embedder 的相似度**区分度差**（"完全不相关"的两条也能到 0.5），
+所以提供了 `RetrievalWeights.lexical_heavy()` 预设，把话语权交给 BM25 与重要性。
+
+**换了 embedder 就要重新标定阈值和权重**，否则要么永远合并不了，
+要么把不同的事合并成一条，要么排序退化成"看起来都差不多"。
 
 ## 可替换的两个接口
 
@@ -145,13 +149,13 @@ tests/test_bm25.py         16   IDF、长度归一化、RRF、min-max
 tests/test_store.py        29   CRUD、软删除、事件审计、导出导入
 tests/test_policy.py       42   打分、去重、取代、累积、衰减、遗忘
 tests/test_extract.py      35   12 类句式、最左匹配、槽位派生
-tests/test_retrieve.py     32   过滤、五路信号、MMR、RRF、降级
+tests/test_retrieve.py     34   过滤、五路信号、MMR、RRF、降级、权重预设
 tests/test_budget.py       18   年龄渲染、分层、预算、丢弃
 tests/test_consolidate.py  18   过期、合并、归纳、衰减、dry-run
 tests/test_manager.py      33   观察、召回、取代、遗忘、统计
 tests/test_agent.py        19   prompt 组装、跨会话记忆、风格改变
                           ─────
-                          307
+                          309
 ```
 
 `manual clock + 注入式 embedder` 让所有涉及时间与相似度的分支都能写出确定性断言。

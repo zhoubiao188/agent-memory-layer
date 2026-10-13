@@ -83,6 +83,29 @@ class TestWeights:
         with pytest.raises(MemoryValidationError):
             RetrievalWeights(similarity=0, lexical=0, recency=0, importance=0, frequency=0)
 
+    def test_lexical_heavy_preset_prioritises_bm25(self):
+        preset = RetrievalWeights.lexical_heavy()
+        default = RetrievalWeights()
+        assert preset.lexical > default.lexical
+        assert preset.similarity < default.similarity
+        assert sum(preset.as_dict().values()) == pytest.approx(1.0)
+
+    def test_lexical_heavy_improves_low_discrimination_ranking(self):
+        """词面级 embedder 下，lexical-heavy 预设能让精确匹配排得更前。"""
+        items = [
+            make("退款服务走 refund_v2 网关"),
+            make("订单流程需要两级审批"),
+        ]
+        default = HybridRetriever(HashingEmbedder(dimension=512))
+        heavy = HybridRetriever(
+            HashingEmbedder(dimension=512), RetrievalWeights.lexical_heavy()
+        )
+        d_hits = default.retrieve("refund_v2", items, now=START, top_k=2)
+        h_hits = heavy.retrieve("refund_v2", items, now=START, top_k=2)
+        assert d_hits[0].item.text == h_hits[0].item.text
+        # 命中词的领先幅度应当被放大
+        assert (h_hits[0].score - h_hits[1].score) > (d_hits[0].score - d_hits[1].score)
+
 
 class TestRetrieve:
     def test_relevant_document_ranks_first(self, retriever):
