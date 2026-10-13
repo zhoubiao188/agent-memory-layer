@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-memory-layer"
+version = "0.1.0"
+description = "给 AI Agent 加一层可运维的长期记忆：写入策略 / 冲突取代 / 混合检索 / 时效衰减 / token 预算组装 / 遗忘与归并"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "技术无止境" }]
+keywords = ["ai-agent", "llm", "memory", "rag", "retrieval", "context-engineering"]
+dependencies = [
+    "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.urls]
+Homepage = "https://github.com/zhoubiao188/agent-memory-layer"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["error::DeprecationWarning"]
